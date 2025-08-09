@@ -1,0 +1,297 @@
+{% extends "base.html" %}
+
+{% block title %}Dashboard - Instagram Analytics{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h1 class="h3 fw-bold">
+        <i class="fas fa-chart-line text-primary me-2"></i>
+        Analytics Dashboard
+    </h1>
+    <div class="text-muted">
+        <small>
+            <i class="fas fa-clock me-1"></i>
+            Last updated: <span id="last-updated">Loading...</span>
+        </small>
+    </div>
+</div>
+
+<!-- Statistics Cards -->
+<div class="row mb-4">
+    <div class="col-md-3 mb-3">
+        <div class="card stat-card h-100 p-3">
+            <div class="d-flex align-items-center">
+                <div class="flex-grow-1">
+                    <h6 class="card-subtitle mb-1 text-white-50">Total Followers</h6>
+                    <h3 class="card-title mb-0" id="total-followers">-</h3>
+                </div>
+                <div class="ms-3">
+                    <i class="fas fa-users fa-2x opacity-75"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-3 mb-3">
+        <div class="card stat-card h-100 p-3" style="background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);">
+            <div class="d-flex align-items-center">
+                <div class="flex-grow-1">
+                    <h6 class="card-subtitle mb-1 text-white-50">Gained Today</h6>
+                    <h3 class="card-title mb-0" id="gained-today">-</h3>
+                </div>
+                <div class="ms-3">
+                    <i class="fas fa-arrow-up fa-2x opacity-75"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-3 mb-3">
+        <div class="card stat-card h-100 p-3" style="background: linear-gradient(135deg, #fa709a 0%, #fee140 100%);">
+            <div class="d-flex align-items-center">
+                <div class="flex-grow-1">
+                    <h6 class="card-subtitle mb-1 text-white-50">Lost Today</h6>
+                    <h3 class="card-title mb-0" id="lost-today">-</h3>
+                </div>
+                <div class="ms-3">
+                    <i class="fas fa-arrow-down fa-2x opacity-75"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-3 mb-3">
+        <div class="card stat-card h-100 p-3" style="background: linear-gradient(135deg, #a8edea 0%, #fed6e3 100%);">
+            <div class="d-flex align-items-center">
+                <div class="flex-grow-1">
+                    <h6 class="card-subtitle mb-1 text-dark">Net Change</h6>
+                    <h3 class="card-title mb-0 text-dark" id="net-change">-</h3>
+                </div>
+                <div class="ms-3">
+                    <i class="fas fa-chart-area fa-2x text-dark opacity-75"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Charts Row -->
+<div class="row mb-4">
+    <div class="col-md-8 mb-3">
+        <div class="chart-container p-4">
+            <h5 class="fw-bold mb-3">
+                <i class="fas fa-chart-line text-primary me-2"></i>
+                Follower Growth (Last 30 Days)
+            </h5>
+            <canvas id="followerChart" height="100"></canvas>
+        </div>
+    </div>
+    
+    <div class="col-md-4 mb-3">
+        <div class="chart-container p-4 h-100">
+            <h5 class="fw-bold mb-3">
+                <i class="fas fa-list text-primary me-2"></i>
+                Recent Changes
+            </h5>
+            <div id="recent-changes" style="max-height: 300px; overflow-y: auto;">
+                <div class="text-center text-muted">
+                    <i class="fas fa-spinner fa-spin"></i> Loading...
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Quick Actions -->
+<div class="row">
+    <div class="col-12">
+        <div class="chart-container p-4">
+            <h5 class="fw-bold mb-3">
+                <i class="fas fa-bolt text-primary me-2"></i>
+                Quick Actions
+            </h5>
+            <div class="row">
+                <div class="col-md-3 mb-2">
+                    <button class="btn btn-outline-primary w-100" onclick="refreshData()">
+                        <i class="fas fa-sync-alt me-2"></i>Refresh Data
+                    </button>
+                </div>
+                <div class="col-md-3 mb-2">
+                    <button class="btn btn-outline-success w-100" onclick="exportData()">
+                        <i class="fas fa-download me-2"></i>Export Data
+                    </button>
+                </div>
+                <div class="col-md-3 mb-2">
+                    <a href="{{ url_for('settings') }}" class="btn btn-outline-warning w-100">
+                        <i class="fas fa-cog me-2"></i>Settings
+                    </a>
+                </div>
+                <div class="col-md-3 mb-2">
+                    <a href="{{ url_for('view_logs') }}" class="btn btn-outline-info w-100">
+                        <i class="fas fa-file-alt me-2"></i>View Logs
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+let followerChart;
+
+// Initialize dashboard
+document.addEventListener('DOMContentLoaded', function() {
+    loadStats();
+    loadTimeline();
+    loadRecentChanges();
+    
+    // Refresh data every 5 minutes
+    setInterval(refreshData, 300000);
+});
+
+async function loadStats() {
+    try {
+        const response = await fetch('/api/stats');
+        const stats = await response.json();
+        
+        // Handle potential errors in stats
+        if (stats.error) {
+            console.error('Stats API error:', stats.error);
+            return;
+        }
+        
+        document.getElementById('total-followers').textContent = (stats.current_followers || 0).toLocaleString();
+        document.getElementById('gained-today').textContent = `+${stats.followers_gained_today || 0}`;
+        document.getElementById('lost-today').textContent = `-${stats.followers_lost_today || 0}`;
+        
+        const netChange = stats.net_change_today || 0;
+        document.getElementById('net-change').textContent = netChange >= 0 ? `+${netChange}` : netChange;
+        document.getElementById('last-updated').textContent = stats.last_updated ? 
+            new Date(stats.last_updated).toLocaleString() : 'Never';
+    } catch (error) {
+        console.error('Error loading stats:', error);
+        // Set default values on error
+        document.getElementById('total-followers').textContent = '0';
+        document.getElementById('gained-today').textContent = '+0';
+        document.getElementById('lost-today').textContent = '-0';
+        document.getElementById('net-change').textContent = '+0';
+        document.getElementById('last-updated').textContent = 'Error loading';
+    }
+}
+
+async function loadTimeline() {
+    try {
+        const response = await fetch('/api/timeline');
+        const timeline = await response.json();
+        
+        const ctx = document.getElementById('followerChart').getContext('2d');
+        
+        if (followerChart) {
+            followerChart.destroy();
+        }
+        
+        // Handle empty data
+        if (!timeline || timeline.length === 0) {
+            ctx.font = '16px Arial';
+            ctx.fillStyle = '#666';
+            ctx.textAlign = 'center';
+            ctx.fillText('No data available yet. Start tracking to see your follower timeline!', 
+                ctx.canvas.width / 2, ctx.canvas.height / 2);
+            return;
+        }
+        
+        followerChart = new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: timeline.map(item => new Date(item.date).toLocaleDateString()),
+                datasets: [{
+                    label: 'Followers',
+                    data: timeline.map(item => item.followers || 0),
+                    borderColor: '#667eea',
+                    backgroundColor: 'rgba(102, 126, 234, 0.1)',
+                    tension: 0.4,
+                    fill: true
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        display: false
+                    }
+                },
+                scales: {
+                    y: {
+                        beginAtZero: false
+                    }
+                }
+            }
+        });
+    } catch (error) {
+        console.error('Error loading timeline:', error);
+        const ctx = document.getElementById('followerChart').getContext('2d');
+        ctx.font = '16px Arial';
+        ctx.fillStyle = '#ff0000';
+        ctx.textAlign = 'center';
+        ctx.fillText('Error loading timeline data', ctx.canvas.width / 2, ctx.canvas.height / 2);
+    }
+}
+
+async function loadRecentChanges() {
+    try {
+        const response = await fetch('/api/recent-changes');
+        const changes = await response.json();
+        
+        const container = document.getElementById('recent-changes');
+        container.innerHTML = '';
+        
+        if (!changes || changes.length === 0) {
+            container.innerHTML = '<div class="text-muted text-center">No recent changes. Start tracking to see follower activity!</div>';
+            return;
+        }
+        
+        changes.forEach(change => {
+            const changeElement = document.createElement('div');
+            changeElement.className = `alert alert-${change.change_type === 'gain' ? 'success' : 'warning'} alert-sm py-2 mb-2`;
+            changeElement.innerHTML = `
+                <div class="d-flex justify-content-between align-items-center">
+                    <span>
+                        <i class="fas fa-${change.change_type === 'gain' ? 'arrow-up' : 'arrow-down'} me-2"></i>
+                        ${change.message || 'Unknown change'}
+                    </span>
+                    <small>${new Date(change.timestamp).toLocaleTimeString()}</small>
+                </div>
+            `;
+            container.appendChild(changeElement);
+        });
+    } catch (error) {
+        console.error('Error loading recent changes:', error);
+        const container = document.getElementById('recent-changes');
+        container.innerHTML = '<div class="text-danger text-center">Error loading changes</div>';
+    }
+}
+
+function refreshData() {
+    loadStats();
+    loadTimeline();
+    loadRecentChanges();
+    
+    // Show success message
+    const alert = document.createElement('div');
+    alert.className = 'alert alert-success alert-dismissible fade show';
+    alert.innerHTML = `
+        Data refreshed successfully!
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    `;
+    document.querySelector('.col-md-10').insertBefore(alert, document.querySelector('.col-md-10').firstChild);
+}
+
+function exportData() {
+    // This would export data as CSV or JSON
+    alert('Export functionality will be implemented soon!');
+}
+</script>
+{% endblock %}

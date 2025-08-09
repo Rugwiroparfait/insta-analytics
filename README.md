@@ -207,6 +207,8 @@ export LOG_LEVEL=DEBUG
 python -m bot.tracker
 ```
 
+## Run app in development
+source venv/bin/activate && python -m web.app
 ## 🤝 Contributing
 
 1. Fork the repository

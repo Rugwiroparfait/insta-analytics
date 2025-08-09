@@ -1,0 +1,281 @@
+{% extends "base.html" %}
+
+{% block title %}Settings - Instagram Analytics{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h1 class="h3 fw-bold">
+        <i class="fas fa-cog text-primary me-2"></i>
+        Settings & Configuration
+    </h1>
+</div>
+
+<!-- Configuration Status -->
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="chart-container p-4">
+            <h5 class="fw-bold mb-3">
+                <i class="fas fa-info-circle text-primary me-2"></i>
+                Current Configuration
+            </h5>
+            
+            <div class="row">
+                <div class="col-md-6">
+                    <table class="table table-borderless">
+                        <tr>
+                            <td><strong>Instagram Username:</strong></td>
+                            <td>
+                                <span class="badge bg-{{ 'success' if config.instagram_username else 'danger' }}">
+                                    {{ config.instagram_username or 'Not Set' }}
+                                </span>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td><strong>Instagram Password:</strong></td>
+                            <td>
+                                <span class="badge bg-{{ 'success' if config.instagram_password_set else 'danger' }}">
+                                    {{ 'Configured' if config.instagram_password_set else 'Not Set' }}
+                                </span>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td><strong>Profile Name:</strong></td>
+                            <td>{{ config.profile_data.full_name or 'Not available' }}</td>
+                        </tr>
+                    </table>
+                </div>
+                <div class="col-md-6">
+                    <table class="table table-borderless">
+                        <tr>
+                            <td><strong>Current Followers:</strong></td>
+                            <td>{{ config.profile_data.followers or 'Not available' }}</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Following:</strong></td>
+                            <td>{{ config.profile_data.following or 'Not available' }}</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Posts:</strong></td>
+                            <td>{{ config.profile_data.posts or 'Not available' }}</td>
+                        </tr>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Configuration Instructions -->
+<div class="row mb-4">
+    <div class="col-md-6">
+        <div class="chart-container p-4 h-100">
+            <h5 class="fw-bold mb-3">
+                <i class="fab fa-instagram text-primary me-2"></i>
+                Instagram Account Info
+            </h5>
+            
+            {% if config.profile_data %}
+            <div class="alert alert-success">
+                <strong>✅ Connected to Instagram!</strong>
+            </div>
+            
+            <div class="d-flex align-items-center mb-3">
+                <div class="me-3">
+                    <i class="fab fa-instagram fa-3x text-primary"></i>
+                </div>
+                <div>
+                    <h6 class="mb-0">{{ config.profile_data.full_name }}</h6>
+                    <small class="text-muted">@{{ config.instagram_username }}</small>
+                    {% if config.profile_data.is_verified %}
+                    <i class="fas fa-check-circle text-primary ms-1"></i>
+                    {% endif %}
+                </div>
+            </div>
+            
+            {% if config.profile_data.biography %}
+            <p class="small text-muted">{{ config.profile_data.biography[:100] }}{{ '...' if config.profile_data.biography|length > 100 else '' }}</p>
+            {% endif %}
+            
+            {% else %}
+            <div class="alert alert-warning">
+                <strong>Instagram connection required!</strong>
+            </div>
+            {% endif %}
+            
+            <div class="mt-3">
+                <small class="text-muted">
+                    <i class="fas fa-shield-alt me-1"></i>
+                    Your credentials are stored securely in your session only.
+                </small>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-6">
+        <div class="chart-container p-4 h-100">
+            <h5 class="fw-bold mb-3">
+                <i class="fas fa-chart-line text-primary me-2"></i>
+                Tracking Status
+            </h5>
+            
+            {% if config.tracking_available %}
+            <div class="alert alert-info">
+                <strong>Ready to track!</strong> You can now start monitoring your Instagram account.
+            </div>
+            {% else %}
+            <div class="alert alert-warning">
+                <strong>Setup required</strong> Please configure your credentials first.
+            </div>
+            {% endif %}
+            
+            <div class="mb-3">
+                <h6>Current Stats:</h6>
+                <ul class="list-unstyled">
+                    <li><strong>Followers:</strong> {{ "{:,}".format(config.profile_data.followers) if config.profile_data.followers else 'N/A' }}</li>
+                    <li><strong>Following:</strong> {{ "{:,}".format(config.profile_data.following) if config.profile_data.following else 'N/A' }}</li>
+                    <li><strong>Posts:</strong> {{ "{:,}".format(config.profile_data.posts) if config.profile_data.posts else 'N/A' }}</li>
+                </ul>
+            </div>
+            
+            <div class="mt-3">
+                <small class="text-muted">
+                    <i class="fas fa-clock me-1"></i>
+                    Login time: {{ config.login_time[:19] if config.login_time else 'Not available' }}
+                </small>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Control Panel -->
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="chart-container p-4">
+            <h5 class="fw-bold mb-3">
+                <i class="fas fa-control-panel text-primary me-2"></i>
+                Control Panel
+            </h5>
+            
+            <div class="row">
+                <div class="col-md-3 mb-2">
+                    <button class="btn btn-success w-100" onclick="startTracking()" 
+                            {% if not config.tracking_available %}disabled{% endif %}>
+                        <i class="fas fa-play me-2"></i>Start Tracking
+                    </button>
+                </div>
+                <div class="col-md-3 mb-2">
+                    <button class="btn btn-outline-primary w-100" onclick="refreshProfileData()">
+                        <i class="fas fa-sync-alt me-2"></i>Refresh Profile
+                    </button>
+                </div>
+                <div class="col-md-3 mb-2">
+                    <a href="{{ url_for('view_logs') }}" class="btn btn-outline-info w-100">
+                        <i class="fas fa-file-alt me-2"></i>View Logs
+                    </a>
+                </div>
+                <div class="col-md-3 mb-2">
+                    <a href="{{ url_for('logout') }}" class="btn btn-outline-danger w-100">
+                        <i class="fas fa-sign-out-alt me-2"></i>Logout
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- System Information -->
+<div class="row">
+    <div class="col-12">
+        <div class="chart-container p-4">
+            <h5 class="fw-bold mb-3">
+                <i class="fas fa-info-circle text-primary me-2"></i>
+                Session Information
+            </h5>
+            
+            <div class="row">
+                <div class="col-md-6">
+                    <table class="table table-borderless table-sm">
+                        <tr>
+                            <td><strong>Logged in as:</strong></td>
+                            <td>{{ config.instagram_username }}</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Account Type:</strong></td>
+                            <td>
+                                {{ 'Private' if config.profile_data.is_private else 'Public' }}
+                                {% if config.profile_data.is_verified %}
+                                <span class="badge bg-primary">Verified</span>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        <tr>
+                            <td><strong>Session Status:</strong></td>
+                            <td><span class="badge bg-success">Active</span></td>
+                        </tr>
+                    </table>
+                </div>
+                <div class="col-md-6">
+                    <div class="alert alert-info">
+                        <small>
+                            <i class="fas fa-lightbulb me-1"></i>
+                            <strong>Note:</strong> Your Instagram credentials are only stored in your browser session and are never saved permanently on the server.
+                        </small>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+async function startTracking() {
+    try {
+        showAlert('info', 'Starting tracking... This may take a moment.');
+        
+        const response = await fetch('/api/start-tracking', {
+            method: 'POST'
+        });
+        const result = await response.json();
+        
+        if (result.status === 'success') {
+            showAlert('success', result.message);
+        } else {
+            showAlert('danger', result.message || 'Failed to start tracking');
+        }
+    } catch (error) {
+        showAlert('danger', 'Error starting tracking: ' + error.message);
+    }
+}
+
+async function refreshProfileData() {
+    try {
+        showAlert('info', 'Refreshing profile data...');
+        // This would refresh the current user's profile data
+        setTimeout(() => {
+            location.reload();
+        }, 1000);
+    } catch (error) {
+        showAlert('danger', 'Error refreshing profile: ' + error.message);
+    }
+}
+
+function showAlert(type, message) {
+    const alert = document.createElement('div');
+    alert.className = `alert alert-${type} alert-dismissible fade show`;
+    alert.innerHTML = `
+        ${message}
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    `;
+    document.querySelector('.col-md-10').insertBefore(alert, document.querySelector('.col-md-10').firstChild);
+    
+    // Auto dismiss after 5 seconds
+    setTimeout(() => {
+        if (alert.parentNode) {
+            alert.remove();
+        }
+    }, 5000);
+}
+</script>
+{% endblock %}

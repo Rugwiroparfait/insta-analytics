@@ -1,0 +1,223 @@
+{% extends "base.html" %}
+
+{% block title %}Logs - Instagram Analytics{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h1 class="h3 fw-bold">
+        <i class="fas fa-file-alt text-primary me-2"></i>
+        Application Logs
+    </h1>
+    <button class="btn btn-outline-primary" onclick="refreshLogs()">
+        <i class="fas fa-sync-alt me-2"></i>Refresh
+    </button>
+</div>
+
+<!-- Tracking Logs -->
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="chart-container p-4">
+            <h5 class="fw-bold mb-3">
+                <i class="fas fa-history text-primary me-2"></i>
+                Recent Tracking Events
+            </h5>
+            
+            {% if tracking_logs %}
+            <div class="table-responsive" style="max-height: 400px; overflow-y: auto;">
+                <table class="table table-sm">
+                    <thead class="table-light sticky-top">
+                        <tr>
+                            <th>Timestamp</th>
+                            <th>Status</th>
+                            <th>Message</th>
+                            <th>Details</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for log in tracking_logs %}
+                        <tr>
+                            <td><small>{{ log.timestamp }}</small></td>
+                            <td>
+                                <span class="badge bg-{{ 'success' if log.status == 'success' else 'danger' if log.status == 'error' else 'warning' }}">
+                                    {{ log.status }}
+                                </span>
+                            </td>
+                            <td>{{ log.message }}</td>
+                            <td>
+                                {% if log.details %}
+                                <small class="text-muted">{{ log.details[:50] }}{{ '...' if log.details|length > 50 else '' }}</small>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% else %}
+            <div class="text-center text-muted py-4">
+                <i class="fas fa-inbox fa-3x mb-3"></i>
+                <p>No tracking logs found. Start tracking to see events here.</p>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<!-- Log Files -->
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="chart-container p-4">
+            <h5 class="fw-bold mb-3">
+                <i class="fas fa-folder text-primary me-2"></i>
+                Log Files
+            </h5>
+            
+            {% if log_files %}
+            <div class="row">
+                {% for file in log_files %}
+                <div class="col-md-4 mb-3">
+                    <div class="card">
+                        <div class="card-body">
+                            <h6 class="card-title">
+                                <i class="fas fa-file-alt me-2"></i>{{ file.name }}
+                            </h6>
+                            <p class="card-text">
+                                <small class="text-muted">
+                                    Size: {{ (file.size / 1024) | round(1) }} KB<br>
+                                    Modified: {{ file.modified[:19] }}
+                                </small>
+                            </p>
+                            <button class="btn btn-sm btn-outline-primary" onclick="viewLogFile('{{ file.name }}')">
+                                <i class="fas fa-eye me-1"></i>View
+                            </button>
+                            <a href="/api/log/{{ file.name }}" download class="btn btn-sm btn-outline-secondary">
+                                <i class="fas fa-download me-1"></i>Download
+                            </a>
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+            {% else %}
+            <div class="text-center text-muted py-4">
+                <i class="fas fa-folder-open fa-3x mb-3"></i>
+                <p>No log files found. Start the tracker to generate logs.</p>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<!-- Log Viewer Modal -->
+<div class="modal fade" id="logModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">
+                    <i class="fas fa-file-alt me-2"></i>
+                    <span id="modalFileName">Log File</span>
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div id="logContent" style="max-height: 500px; overflow-y: auto;">
+                    <div class="text-center">
+                        <i class="fas fa-spinner fa-spin"></i> Loading...
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                <button type="button" class="btn btn-primary" onclick="downloadCurrentLog()">
+                    <i class="fas fa-download me-1"></i>Download
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- System Information -->
+<div class="row">
+    <div class="col-12">
+        <div class="chart-container p-4">
+            <h5 class="fw-bold mb-3">
+                <i class="fas fa-info-circle text-primary me-2"></i>
+                System Information
+            </h5>
+            
+            <div class="row">
+                <div class="col-md-6">
+                    <table class="table table-borderless table-sm">
+                        <tr>
+                            <td><strong>Log Directory:</strong></td>
+                            <td><code>logs/</code></td>
+                        </tr>
+                        <tr>
+                            <td><strong>Total Log Files:</strong></td>
+                            <td>{{ log_files|length }}</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Total Events:</strong></td>
+                            <td>{{ tracking_logs|length }}</td>
+                        </tr>
+                    </table>
+                </div>
+                <div class="col-md-6">
+                    <div class="alert alert-info">
+                        <small>
+                            <i class="fas fa-lightbulb me-1"></i>
+                            <strong>Tip:</strong> Logs are automatically rotated and old entries are cleaned up to prevent disk space issues.
+                        </small>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+let currentLogFile = '';
+
+async function viewLogFile(filename) {
+    try {
+        currentLogFile = filename;
+        document.getElementById('modalFileName').textContent = filename;
+        document.getElementById('logContent').innerHTML = '<div class="text-center"><i class="fas fa-spinner fa-spin"></i> Loading...</div>';
+        
+        const modal = new bootstrap.Modal(document.getElementById('logModal'));
+        modal.show();
+        
+        const response = await fetch(`/api/log/${filename}`);
+        const result = await response.json();
+        
+        if (result.error) {
+            document.getElementById('logContent').innerHTML = `<div class="alert alert-danger">${result.error}</div>`;
+        } else {
+            document.getElementById('logContent').innerHTML = `<pre style="font-size: 0.8em;">${result.content}</pre>`;
+        }
+    } catch (error) {
+        document.getElementById('logContent').innerHTML = `<div class="alert alert-danger">Error loading log: ${error.message}</div>`;
+    }
+}
+
+function downloadCurrentLog() {
+    if (currentLogFile) {
+        window.open(`/api/log/${currentLogFile}`, '_blank');
+    }
+}
+
+function refreshLogs() {
+    location.reload();
+}
+
+// Auto-scroll to bottom of log content when viewing
+document.getElementById('logModal').addEventListener('shown.bs.modal', function() {
+    const logContent = document.getElementById('logContent');
+    setTimeout(() => {
+        logContent.scrollTop = logContent.scrollHeight;
+    }, 100);
+});
+</script>
+{% endblock %}
